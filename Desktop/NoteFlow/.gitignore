@@ -1,0 +1,8 @@
+General/
+Downloads/
+*.docx
+*.pdf
+*.jpg
+*.png
+*.pptx
+.DS_Store
