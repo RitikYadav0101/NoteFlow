@@ -1,12 +1,19 @@
 {
-    "manifest_version": 3,
-    "name":"NoteFlow",
-    "version":"1.0",
-    "description":"Academic WhatsApp for notes organizer",
-    "content_scripts":[
-        {
-            "matches": ["https://web.whatsapp.com/*"],
-            "js": ["content.js"]
-        }
-    ]
+  "manifest_version": 3,
+  "name": "NoteFlow",
+  "version": "1.0",
+  "description": "Academic WhatsApp notes organizer",
+  "permissions": [
+    "downloads",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["content.js"]
+    }
+  ]
 }
