@@ -7,6 +7,9 @@
     "downloads",
     "tabs"
   ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },

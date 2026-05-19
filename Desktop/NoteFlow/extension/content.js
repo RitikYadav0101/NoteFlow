@@ -13,7 +13,6 @@ function getGroupName() {
   const header = document.querySelector('[data-testid="conversation-header"]');
   if (header) {
     const fullText = header.innerText.split('\n')[0].trim();
-    // Phone numbers ko filter karo
     if (fullText.match(/^\+?[\d\s]+$/)) {
       return "General";
     }
@@ -22,9 +21,21 @@ function getGroupName() {
   return "General";
 }
 
+function sendGroupName() {
+  const groupName = getGroupName();
+  fetch('http://localhost:3000/group', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ groupName: groupName })
+  }).catch(function(e) {
+    // server nahi chala to ignore karo
+  });
+}
+
 function tryDownload(node, filename) {
   const downloadBtn = node.querySelector('[aria-label="Download"]') ||
                       node.querySelector('[data-testid*="download"]');
+  
   if (downloadBtn) {
     const groupName = getGroupName();
     console.log("Downloading: " + filename + " → NoteFlow/" + groupName + "/");
@@ -35,7 +46,7 @@ function tryDownload(node, filename) {
 function checkForFiles(node) {
   if (!isReady) return;
   if (!node.innerText) return;
-
+  
   const lines = node.innerText.split('\n');
   lines.forEach(function(line) {
     fileTypes.forEach(function(type) {
@@ -65,6 +76,12 @@ observer.observe(document.body, {
   childList: true,
   subtree: true
 });
+
+document.addEventListener('click', function() {
+  setTimeout(sendGroupName, 1000);
+});
+
+setTimeout(sendGroupName, 3000);
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   if (message.type === "GET_GROUP_NAME") {
