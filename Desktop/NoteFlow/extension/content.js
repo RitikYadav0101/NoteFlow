@@ -2,6 +2,7 @@ console.log("NoteFlow loaded!");
 
 const fileTypes = ['.pdf', '.docx', '.jpg', '.png', '.pptx'];
 const detectedFiles = new Set();
+const downloadingFiles = new Set();
 let isReady = false;
 
 setTimeout(function() {
@@ -21,25 +22,34 @@ function getGroupName() {
   return "General";
 }
 
+let groupSendTimeout = null;
 function sendGroupName() {
-  const groupName = getGroupName();
-  fetch('http://localhost:3000/group', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ groupName: groupName })
-  }).catch(function(e) {
-    // server nahi chala to ignore karo
-  });
+  if (groupSendTimeout) clearTimeout(groupSendTimeout);
+  groupSendTimeout = setTimeout(function() {
+    const groupName = getGroupName();
+    fetch('http://localhost:3000/group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupName: groupName })
+    }).catch(function(e) {});
+  }, 500);
 }
 
 function tryDownload(node, filename) {
+  if (downloadingFiles.has(filename)) return;
+  
   const downloadBtn = node.querySelector('[aria-label="Download"]') ||
                       node.querySelector('[data-testid*="download"]');
   
   if (downloadBtn) {
+    downloadingFiles.add(filename);
     const groupName = getGroupName();
     console.log("Downloading: " + filename + " → NoteFlow/" + groupName + "/");
     downloadBtn.click();
+    
+    setTimeout(function() {
+      downloadingFiles.delete(filename);
+    }, 10000);
   }
 }
 
@@ -78,7 +88,7 @@ observer.observe(document.body, {
 });
 
 document.addEventListener('click', function() {
-  setTimeout(sendGroupName, 1000);
+  sendGroupName();
 });
 
 setTimeout(sendGroupName, 3000);

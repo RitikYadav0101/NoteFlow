@@ -6,6 +6,7 @@ const http = require('http');
 const watchPath = path.join(os.homedir(), 'Desktop', 'NoteFlow', 'Downloads');
 const noteflowPath = path.join(os.homedir(), 'Desktop', 'NoteFlow');
 const fileTypes = ['.pdf', '.docx', '.jpg', '.png', '.pptx'];
+const movedFiles = new Set();
 
 let currentGroup = "General";
 
@@ -13,7 +14,6 @@ if (!fs.existsSync(watchPath)) {
   fs.mkdirSync(watchPath, { recursive: true });
 }
 
-// HTTP server — group name receive karega
 const server = http.createServer(function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -47,7 +47,6 @@ server.listen(3000, function() {
   console.log("NoteFlow server chalu ho gaya — port 3000");
 });
 
-// File watcher
 fs.watch(watchPath, function(event, filename) {
   if (!filename) return;
   
@@ -55,21 +54,31 @@ fs.watch(watchPath, function(event, filename) {
   if (!fileTypes.includes(ext)) return;
   
   const sourcePath = path.join(watchPath, filename);
+  const baseFilename = filename.split('(')[0].trim();
   
   setTimeout(function() {
     try {
-      if (fs.existsSync(sourcePath)) {
-        const targetDir = path.join(noteflowPath, currentGroup);
-        const targetPath = path.join(targetDir, filename);
-        
-        if (!fs.existsSync(targetDir)) {
-          fs.mkdirSync(targetDir, { recursive: true });
-        }
-        
-        fs.copyFileSync(sourcePath, targetPath);
+      if (!fs.existsSync(sourcePath)) return;
+      
+      if (movedFiles.has(baseFilename)) {
+        console.log("Duplicate skip:", filename);
         fs.unlinkSync(sourcePath);
-        console.log("File move hui: " + filename + " → NoteFlow/" + currentGroup + "/");
+        return;
       }
+      
+      movedFiles.add(baseFilename);
+      
+      const targetDir = path.join(noteflowPath, currentGroup);
+      const targetPath = path.join(targetDir, filename);
+      
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      
+      fs.copyFileSync(sourcePath, targetPath);
+      fs.unlinkSync(sourcePath);
+      console.log("File move hui: " + filename + " → NoteFlow/" + currentGroup + "/");
+      
     } catch(err) {
       console.log("Error:", err.message);
     }
