@@ -2,16 +2,29 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const http = require('http');
+const config = require('./config');
 
 const watchPath = path.join(os.homedir(), 'Desktop', 'NoteFlow', 'Downloads');
-const noteflowPath = path.join(os.homedir(), 'Desktop', 'NoteFlow');
-const fileTypes = ['.pdf', '.docx', '.jpg', '.png', '.pptx'];
+const subjectsPath = path.join(os.homedir(), 'Desktop', 'NoteFlow', 'subjects');
 const movedFiles = new Set();
 
-let currentGroup = "General";
+let currentGroup = "Unsorted";
 
 if (!fs.existsSync(watchPath)) {
   fs.mkdirSync(watchPath, { recursive: true });
+}
+
+if (!fs.existsSync(subjectsPath)) {
+  fs.mkdirSync(subjectsPath, { recursive: true });
+}
+
+async function classifyFile(filename, groupName) {
+  if (config.GROUP_MAPPING[groupName]) {
+    console.log("Group mapping mila:", config.GROUP_MAPPING[groupName]);
+    return config.GROUP_MAPPING[groupName];
+  }
+  console.log("Mapping nahi mila — Unsorted mein save hogi");
+  return "Unsorted";
 }
 
 const server = http.createServer(function(req, res) {
@@ -31,7 +44,7 @@ const server = http.createServer(function(req, res) {
     req.on('end', function() {
       try {
         const data = JSON.parse(body);
-        currentGroup = data.groupName || "General";
+        currentGroup = data.groupName || "Unsorted";
         console.log("Group updated:", currentGroup);
         res.writeHead(200);
         res.end('OK');
@@ -47,29 +60,40 @@ server.listen(3000, function() {
   console.log("NoteFlow server chalu ho gaya — port 3000");
 });
 
-fs.watch(watchPath, function(event, filename) {
+fs.watch(watchPath, async function(event, filename) {
   if (!filename) return;
   
   const ext = path.extname(filename).toLowerCase();
+  const fileTypes = ['.pdf', '.docx', '.jpg', '.png', '.pptx'];
   if (!fileTypes.includes(ext)) return;
   
-  const sourcePath = path.join(watchPath, filename);
   const baseFilename = filename.split('(')[0].trim();
   
-  setTimeout(function() {
+  if (movedFiles.has(baseFilename)) {
+    console.log("Duplicate skip:", filename);
+    return;
+  }
+  
+  movedFiles.add(baseFilename);
+  
+  const sourcePath = path.join(watchPath, filename);
+  
+  setTimeout(async function() {
     try {
       if (!fs.existsSync(sourcePath)) return;
       
-      if (movedFiles.has(baseFilename)) {
-        console.log("Duplicate skip:", filename);
-        fs.unlinkSync(sourcePath);
+      const subject = await classifyFile(filename, currentGroup);
+      
+      const targetDir = path.join(subjectsPath, subject);
+      const targetPath = path.join(targetDir, filename);
+      
+      if (fs.existsSync(targetPath)) {
+        console.log("File already exists:", filename);
+        if (fs.existsSync(sourcePath)) {
+          fs.unlinkSync(sourcePath);
+        }
         return;
       }
-      
-      movedFiles.add(baseFilename);
-      
-      const targetDir = path.join(noteflowPath, currentGroup);
-      const targetPath = path.join(targetDir, filename);
       
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
@@ -77,12 +101,12 @@ fs.watch(watchPath, function(event, filename) {
       
       fs.copyFileSync(sourcePath, targetPath);
       fs.unlinkSync(sourcePath);
-      console.log("File move hui: " + filename + " → NoteFlow/" + currentGroup + "/");
+      console.log("File save hui: " + filename + " → subjects/" + subject + "/");
       
     } catch(err) {
       console.log("Error:", err.message);
     }
-  }, 3000);
+  }, 5000);
 });
 
 console.log("NoteFlow Watcher chalu ho gaya!");
