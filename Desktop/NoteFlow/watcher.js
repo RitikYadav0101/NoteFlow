@@ -23,8 +23,44 @@ async function classifyFile(filename, groupName) {
     console.log("Group mapping mila:", config.GROUP_MAPPING[groupName]);
     return config.GROUP_MAPPING[groupName];
   }
-  console.log("Mapping nahi mila — Unsorted mein save hogi");
-  return "Unsorted";
+
+  // Keyword check pehle
+  if (config.SUBJECT_KEYWORDS) {
+    for (const [subject, keywords] of Object.entries(config.SUBJECT_KEYWORDS)) {
+      for (const keyword of keywords) {
+        if (filename.toLowerCase().includes(keyword.toLowerCase())) {
+          console.log("Keyword match mila:", subject);
+          return subject;
+        }
+      }
+    }
+  }
+
+  try {
+    const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+    
+    const prompt = `File naam: "${filename}", Group: "${groupName}". Subjects: ${config.SUBJECTS.join(', ')}. Sirf subject naam likho. Agar match nahi mila toh "Unsorted" likho.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${config.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    const subject = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Unsorted";
+    console.log("Gemini ne classify kiya:", subject);
+    return subject;
+
+  } catch(err) {
+    console.log("Gemini error:", err.message);
+    return "Unsorted";
+  }
 }
 
 const server = http.createServer(function(req, res) {

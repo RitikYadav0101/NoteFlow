@@ -9,6 +9,14 @@ module.exports = {
     "C Programming"
   ],
 
+  SUBJECT_KEYWORDS: {
+    "Operating Systems": ["OS", "operating system", "process", "memory", "scheduling", "virtual memory", "segmentation", "paging", "disk", "file system"],
+    "DET": ["DET", "differential", "transform", "laplace", "fourier"],
+    "FEE": ["FEE", "electrical", "circuit", "voltage", "current"],
+    "DECA": ["DECA", "electronics", "digital"],
+    "C Programming": ["C programming", "code", "array", "pointer", "function", "struct"]
+  },
+
   GROUP_MAPPING: {
     "OSLF G-14 (2026)": "Operating Systems",
     "G14 DET": "DET",
